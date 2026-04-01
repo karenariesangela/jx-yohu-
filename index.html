@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>江西省消费品以旧换新补贴活动</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #1a1a1a;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: pan-x pan-y;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .slides-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .slide {
+            display: none;
+            width: 100%;
+            height: 100%;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .slide.active {
+            display: flex;
+            flex-direction: column;
+        }
+        .slide img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            pointer-events: none;
+        }
+        .hotspot {
+            position: absolute;
+            cursor: pointer;
+            z-index: 10;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            transition: border-color 0.2s;
+        }
+        .hotspot:active {
+            border-color: rgba(255, 255, 0, 0.6);
+        }
+        /* Page indicator */
+        .page-indicator {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+            background: rgba(0,0,0,0.3);
+            padding: 8px 16px;
+            border-radius: 20px;
+        }
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            transition: all 0.3s;
+        }
+        .dot.active {
+            background: #ff4757;
+            transform: scale(1.2);
+        }
+        /* Navigation hint */
+        .nav-hint {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 14px;
+            background: rgba(0,0,0,0.6);
+            padding: 10px 24px;
+            border-radius: 25px;
+            z-index: 100;
+            animation: fadeInOut 2.5s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 0.3; }
+        }
+        .nav-hint.hidden {
+            display: none;
+        }
+        /* Loading screen */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s;
+        }
+        .loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .loading-text {
+            color: white;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.2);
+            border-top-color: #ff4757;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading screen -->
+    <div class="loading" id="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">加载中...</div>
+    </div>
+
+    <div class="slides-container">
+        <!-- Slide 1: 云闪付首页 -->
+        <div class="slide active" id="slide1">
+            <img src="slide1.jpeg" alt="云闪付首页">
+            <!-- 点击玩赚中心按钮 -->
+            <div class="hotspot" style="left: 20%; top: 68%; width: 60%; height: 10%;" onclick="goToSlide(2)"></div>
+        </div>
+        
+        <!-- Slide 2: 活动选择页 -->
+        <div class="slide" id="slide2">
+            <img src="slide2.jpeg" alt="活动选择页">
+            <!-- 点击2026年按钮 -->
+            <div class="hotspot" style="left: 10%; top: 42%; width: 80%; height: 12%;" onclick="goToSlide(3)"></div>
+        </div>
+        
+        <!-- Slide 3: 活动详情 -->
+        <div class="slide" id="slide3">
+            <img src="slide3.jpeg" alt="活动详情">
+            <!-- 点击家电以旧换新（线上）了解详情 -->
+            <div class="hotspot" style="left: 5%; top: 32%; width: 90%; height: 20%;" onclick="goToSlide(4)"></div>
+        </div>
+        
+        <!-- Slide 4: 线上家电换新专区 -->
+        <div class="slide" id="slide4">
+            <img src="slide4.jpeg" alt="线上家电换新专区">
+            <!-- 最后一页，无跳转 -->
+        </div>
+    </div>
+    
+    <!-- Page indicator -->
+    <div class="page-indicator" id="pageIndicator">
+        <div class="dot active" data-slide="1"></div>
+        <div class="dot" data-slide="2"></div>
+        <div class="dot" data-slide="3"></div>
+        <div class="dot" data-slide="4"></div>
+    </div>
+    
+    <!-- Navigation hint -->
+    <div class="nav-hint" id="navHint">点击按钮继续</div>
+
+    <script>
+        let currentSlide = 1;
+        const totalSlides = 4;
+        let hasInteracted = false;
+        
+        function goToSlide(n) {
+            if (n < 1 || n > totalSlides) return;
+            
+            // Hide current slide
+            document.getElementById('slide' + currentSlide).classList.remove('active');
+            
+            // Show new slide
+            currentSlide = n;
+            document.getElementById('slide' + currentSlide).classList.add('active');
+            
+            // Update dots
+            document.querySelectorAll('.dot').forEach((dot, i) => {
+                dot.classList.toggle('active', i + 1 === currentSlide);
+            });
+            
+            // Hide hint after first interaction
+            if (!hasInteracted) {
+                hasInteracted = true;
+                document.getElementById('navHint').classList.add('hidden');
+            }
+            
+            // Last slide - hide hint
+            if (currentSlide === totalSlides) {
+                document.getElementById('navHint').classList.add('hidden');
+                document.getElementById('pageIndicator').style.bottom = '24px';
+            }
+            
+            // Scroll hotspot into view if needed
+            window.scrollTo(0, 0);
+        }
+        
+        // Prevent default touch behaviors
+        document.addEventListener('touchmove', function(e) {
+            if (e.target.closest('.slide')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        // Handle swipe
+        let touchStartY = 0;
+        let touchStartX = 0;
+        
+        document.addEventListener('touchstart', function(e) {
+            touchStartY = e.touches[0].clientY;
+            touchStartX = e.touches[0].clientX;
+        }, { passive: true });
+        
+        document.addEventListener('touchend', function(e) {
+            const touchEndY = e.changedTouches[0].clientY;
+            const touchEndX = e.changedTouches[0].clientX;
+            const diffY = touchStartY - touchEndY;
+            const diffX = touchStartX - touchEndX;
+            
+            // Only handle swipe if not clicking a hotspot
+            if (e.target.closest('.hotspot')) return;
+            
+            // Swipe up to advance
+            if (Math.abs(diffY) > Math.abs(diffX) && diffY > 50) {
+                goToSlide(currentSlide + 1);
+            }
+        }, { passive: true });
+        
+        // Hide loading after images load
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                document.getElementById('loading').classList.add('hidden');
+            }, 500);
+        });
+        
+        // Fallback loading hide
+        setTimeout(function() {
+            document.getElementById('loading').classList.add('hidden');
+        }, 3000);
+    </script>
+</body>
+</html>
